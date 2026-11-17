@@ -1,0 +1,24 @@
+{
+  "name": "navicat-local",
+  "productName": "NavicatLocal",
+  "version": "1.0.0",
+  "description": "完全本地运行的数据库管理工具（Navicat 简化版），支持 SQLite / MySQL / MariaDB / PostgreSQL / SQL Server",
+  "main": "main.js",
+  "author": "caibo",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-packager . NavicatLocal --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "dependencies": {
+    "mssql": "^12.7.14",
+    "mysql2": "^3.24.6",
+    "pg": "^8.23.1",
+    "sql.js": "^1.16.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-packager": "^17.1.2"
+  }
+}

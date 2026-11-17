@@ -1,0 +1,38 @@
+'use strict';
+
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('api', {
+  openFile: () => ipcRenderer.invoke('db:openFile'),
+  createFile: () => ipcRenderer.invoke('db:createFile'),
+  openPath: (p) => ipcRenderer.invoke('db:openPath', p),
+  close: (id) => ipcRenderer.invoke('db:close', id),
+  tables: (id) => ipcRenderer.invoke('db:tables', id),
+  databases: (id) => ipcRenderer.invoke('db:databases', id),
+  tableData: (id, table, limit, offset, where) => ipcRenderer.invoke('db:tableData', { id, table, limit, offset, where }),
+  query: (id, sql) => ipcRenderer.invoke('db:query', { id, sql }),
+  save: (id) => ipcRenderer.invoke('db:save', id),
+  recent: () => ipcRenderer.invoke('db:recent'),
+  mysqlConnect: (cfg) => ipcRenderer.invoke('mysql:connect', cfg),
+  mysqlUseDatabase: (id, database) => ipcRenderer.invoke('mysql:useDatabase', { id, database }),
+  pgConnect: (cfg) => ipcRenderer.invoke('pg:connect', cfg),
+  pgUseDatabase: (id, database) => ipcRenderer.invoke('pg:useDatabase', { id, database }),
+  mssqlConnect: (cfg) => ipcRenderer.invoke('mssql:connect', cfg),
+  mssqlUseDatabase: (id, database) => ipcRenderer.invoke('mssql:useDatabase', { id, database }),
+  tableInfo: (id, table) => ipcRenderer.invoke('db:tableInfo', { id, table }),
+  execute: (id, sql, params) => ipcRenderer.invoke('db:execute', { id, sql, params }),
+  exportCsv: (payload) => ipcRenderer.invoke('db:exportCsv', payload),
+  exportExcel: (payload) => ipcRenderer.invoke('db:exportExcel', payload),
+  importCsv: () => ipcRenderer.invoke('db:importCsv'),
+  exportText: (payload) => ipcRenderer.invoke('db:saveText', payload),
+  tableCounts: (id) => ipcRenderer.invoke('db:tableCounts', id),
+  dumpSql: (id) => ipcRenderer.invoke('db:dumpSql', id),
+  runSqlFile: (id) => ipcRenderer.invoke('db:runSqlFile', id),
+  ddl: (id, table) => ipcRenderer.invoke('db:ddl', { id, table }),
+  testConnection: (cfg) => ipcRenderer.invoke('db:testConnection', cfg),
+  serverInfo: (id) => ipcRenderer.invoke('db:serverInfo', id),
+  listUsers: (id) => ipcRenderer.invoke('db:listUsers', id),
+  createUser: (id, cfg) => ipcRenderer.invoke('db:createUser', { id, ...cfg }),
+  dropUser: (id, user, host) => ipcRenderer.invoke('db:dropUser', { id, user, host }),
+  foreignKeys: (id) => ipcRenderer.invoke('db:foreignKeys', id),
+});

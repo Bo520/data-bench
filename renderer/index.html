@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;" />
+  <title>NavicatLocal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="toolbar">
+    <button id="btn-new-conn-top" class="tb tb-label" title="新建连接"><span class="tb-ico">🔌</span>新建连接</button>
+    <button id="btn-query" class="tb tb-label" title="新建 SQL 查询"><span class="tb-ico sql-ico">SQL</span>查询</button>
+    <span class="tb-sep"></span>
+    <button id="btn-save" class="tb tb-label" title="保存"><span class="tb-ico">💾</span>保存</button>
+    <span class="spacer"></span>
+    <select id="conn-select" title="当前连接"></select>
+    <span id="conn-info" class="conn-info"></span>
+  </header>
+
+  <div id="main">
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <span>连接</span>
+        <button id="btn-new-conn" class="new-conn-btn" title="新建连接">＋</button>
+      </div>
+      <div id="tree"></div>
+    </aside>
+    <div id="sidebar-resizer" title="拖动调整宽度"></div>
+    <section id="content">
+      <div id="tabbar"></div>
+      <div id="tabcontent"></div>
+    </section>
+  </div>
+
+  <footer id="statusbar">
+    <span id="status-left"></span>
+    <span id="status-right"></span>
+  </footer>
+
+  <div id="conn-type-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title">新建连接</div>
+      <button class="conn-type-option" id="ct-sqlite-open">打开 SQLite 数据库文件…</button>
+      <button class="conn-type-option" id="ct-sqlite-new">新建 SQLite 数据库文件…</button>
+      <button class="conn-type-option" id="ct-mysql">连接 MySQL / MariaDB…</button>
+      <button class="conn-type-option" id="ct-pg">连接 PostgreSQL…</button>
+      <button class="conn-type-option" id="ct-mssql">连接 SQL Server…</button>
+      <div class="modal-actions"><button id="ct-cancel" class="tb">取消</button></div>
+    </div>
+  </div>
+
+  <div id="mysql-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title">连接 MySQL / MariaDB</div>
+      <div class="modal-field"><label>类型</label>
+        <select id="m-flavor">
+          <option value="mysql">MySQL</option>
+          <option value="mariadb">MariaDB</option>
+        </select>
+      </div>
+      <div class="modal-field"><label>连接名</label><input id="m-name" placeholder="可选，默认自动生成" /></div>
+      <div class="modal-field"><label>主机</label><input id="m-host" value="127.0.0.1" /></div>
+      <div class="modal-field"><label>端口</label><input id="m-port" value="3306" /></div>
+      <div class="modal-field"><label>用户</label><input id="m-user" value="root" /></div>
+      <div class="modal-field"><label>密码</label><input id="m-password" type="password" /></div>
+      <div class="modal-field"><label>数据库</label><input id="m-database" placeholder="可选，留空则列出所有库" /></div>
+      <div id="m-error" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="m-test" class="tb">测试连接</button>
+        <button id="m-connect" class="tb">连接</button>
+        <button id="m-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pg-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title">连接 PostgreSQL</div>
+      <div class="modal-field"><label>连接名</label><input id="pg-name" placeholder="可选，默认自动生成" /></div>
+      <div class="modal-field"><label>主机</label><input id="pg-host" value="127.0.0.1" /></div>
+      <div class="modal-field"><label>端口</label><input id="pg-port" value="5432" /></div>
+      <div class="modal-field"><label>用户</label><input id="pg-user" value="postgres" /></div>
+      <div class="modal-field"><label>密码</label><input id="pg-password" type="password" /></div>
+      <div class="modal-field"><label>数据库</label><input id="pg-database" placeholder="可选，留空则列出所有库" /></div>
+      <div id="pg-error" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="pg-test" class="tb">测试连接</button>
+        <button id="pg-connect" class="tb">连接</button>
+        <button id="pg-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mssql-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title">连接 SQL Server</div>
+      <div class="modal-field"><label>连接名</label><input id="ms-name" placeholder="可选，默认自动生成" /></div>
+      <div class="modal-field"><label>主机</label><input id="ms-host" value="127.0.0.1" /></div>
+      <div class="modal-field"><label>端口</label><input id="ms-port" value="1433" /></div>
+      <div class="modal-field"><label>用户</label><input id="ms-user" value="sa" /></div>
+      <div class="modal-field"><label>密码</label><input id="ms-password" type="password" /></div>
+      <div class="modal-field"><label>数据库</label><input id="ms-database" placeholder="可选，留空则列出所有库" /></div>
+      <div id="ms-error" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="ms-test" class="tb">测试连接</button>
+        <button id="ms-connect" class="tb">连接</button>
+        <button id="ms-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="table-designer-modal" class="modal hidden">
+    <div class="modal-box wide">
+      <div class="modal-title">新建表</div>
+      <div class="modal-field"><label>表名</label><input id="td-name" placeholder="输入表名" /></div>
+      <div class="designer-head">
+        <span class="dh-name">字段名</span><span class="dh-type">类型</span><span class="dh-pk">主键</span><span class="dh-nn">非空</span><span class="dh-dflt">默认值</span><span class="dh-del"></span>
+      </div>
+      <div id="td-columns"></div>
+      <button id="td-add-col" class="tb">＋ 添加字段</button>
+      <div id="td-error" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="td-create" class="tb">创建</button>
+        <button id="td-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="prompt-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title" id="prompt-title"></div>
+      <div class="modal-field"><input id="prompt-input" /></div>
+      <div class="modal-actions">
+        <button id="prompt-ok" class="tb">确定</button>
+        <button id="prompt-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="db-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title" id="db-title">新建数据库</div>
+      <div class="modal-field"><label>数据库名</label><input id="db-name" placeholder="数据库名称" /></div>
+      <div class="modal-field" id="db-charset-field"><label>字符集</label><select id="db-charset"></select></div>
+      <div class="modal-field" id="db-collate-field"><label>排序规则</label><select id="db-collate"></select></div>
+      <div id="db-error" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="db-ok" class="tb">创建</button>
+        <button id="db-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="transfer-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title">数据传输</div>
+      <div class="modal-field" id="tr-db-field"><label>目标数据库</label><select id="tr-db"></select></div>
+      <div class="modal-field"><label>目标表名</label><input id="tr-table" /></div>
+      <div class="modal-field"><label>模式</label>
+        <select id="tr-mode">
+          <option value="create">新建目标表（结构+数据）</option>
+          <option value="append">追加到已有表（仅数据）</option>
+        </select>
+      </div>
+      <div id="tr-error" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="tr-ok" class="tb">开始传输</button>
+        <button id="tr-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cmp-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title">结构对比</div>
+      <div class="modal-field"><label>对比表</label><select id="cmp-table"></select></div>
+      <div class="modal-actions">
+        <button id="cmp-ok" class="tb">对比</button>
+        <button id="cmp-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gen-modal" class="modal hidden">
+    <div class="modal-box wide">
+      <div class="modal-title">数据生成器</div>
+      <div class="modal-field"><label>生成行数</label><input id="gen-rows" value="100" /></div>
+      <div class="gen-list" id="gen-cols"></div>
+      <div id="gen-error" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="gen-ok" class="tb">生成</button>
+        <button id="gen-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cu-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title">新建用户</div>
+      <div class="modal-field"><label>用户名</label><input id="cu-user" /></div>
+      <div class="modal-field"><label>主机</label><input id="cu-host" value="%" /></div>
+      <div class="modal-field"><label>密码</label><input id="cu-password" type="password" /></div>
+      <div id="cu-error" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="cu-ok" class="tb">创建</button>
+        <button id="cu-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="qb-modal" class="modal hidden">
+    <div class="modal-box wide">
+      <div class="modal-title">查询构建器</div>
+      <div class="modal-field"><label>表</label><select id="qb-table"></select></div>
+      <div class="modal-field"><label>条件</label><input id="qb-where" placeholder="WHERE 条件，如 age > 30（可选）" /></div>
+      <div class="modal-field"><label>排序</label><input id="qb-order" placeholder="ORDER BY 字段（可选）" /></div>
+      <div class="modal-field"><label>限制</label><input id="qb-limit" value="100" /></div>
+      <div class="ti-head">字段（勾选要查询的列）</div>
+      <div class="gen-list" id="qb-cols"></div>
+      <div id="qb-error" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="qb-ok" class="tb">生成 SQL</button>
+        <button id="qb-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="task-modal" class="modal hidden">
+    <div class="modal-box wide">
+      <div class="modal-title">新建计划任务</div>
+      <div class="modal-field"><label>任务名</label><input id="task-name" /></div>
+      <div class="modal-field"><label>间隔(分)</label><input id="task-interval" value="10" /></div>
+      <div class="modal-field"><label>SQL</label><textarea id="task-sql" rows="4"></textarea></div>
+      <div id="task-error" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="task-ok" class="tb">保存</button>
+        <button id="task-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title" id="confirm-title"></div>
+      <div class="modal-actions">
+        <button id="confirm-ok" class="tb">确定</button>
+        <button id="confirm-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <datalist id="type-list">
+    <option value="INTEGER"></option>
+    <option value="TEXT"></option>
+    <option value="REAL"></option>
+    <option value="BLOB"></option>
+    <option value="NUMERIC"></option>
+    <option value="INT"></option>
+    <option value="BIGINT"></option>
+    <option value="VARCHAR(255)"></option>
+    <option value="DATETIME"></option>
+    <option value="DECIMAL(10,2)"></option>
+    <option value="DATE"></option>
+    <option value="FLOAT"></option>
+  </datalist>
+
+  <script src="app.js"></script>
+</body>
+</html>
