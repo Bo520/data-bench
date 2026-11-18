@@ -1050,6 +1050,40 @@ function makeFolder(conn, label, list) {
   return f;
 }
 
+function makeDatabaseNode(conn, db) {
+  const node = el('div', 'tree-folder');
+  const isActive = db.name === conn.database;
+  const head = el('div', 'tree-folder-head' + (isActive ? ' active' : ''));
+  const caret = el('span', 'caret' + (isActive ? ' open' : ''), '▶');
+  head.appendChild(caret);
+  head.appendChild(el('span', 'ico', '🗄'));
+  head.appendChild(el('span', null, db.name));
+  const fc = el('div', 'tree-folder-items' + (isActive ? '' : ' collapsed'));
+  if (isActive) {
+    const tables = (conn.tables || []).filter((t) => t.type !== 'view' && t.type !== 'database');
+    const views = (conn.tables || []).filter((t) => t.type === 'view');
+    if (tables.length) fc.appendChild(makeFolder(conn, '表', tables));
+    if (views.length) fc.appendChild(makeFolder(conn, '视图', views));
+    if (!tables.length && !views.length) fc.appendChild(el('div', 'tree-empty', '（无表）'));
+  }
+  head.addEventListener('click', () => {
+    if (isActive) {
+      const collapsed = fc.classList.toggle('collapsed');
+      caret.classList.toggle('open', !collapsed);
+    } else {
+      useDatabase(conn.id, db.name);
+    }
+  });
+  head.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showDatabaseContextMenu(e, conn, db);
+  });
+  node.appendChild(head);
+  node.appendChild(fc);
+  return node;
+}
+
 function buildTree() {
   const tree = $('#tree');
   tree.innerHTML = '';
@@ -1072,35 +1106,10 @@ function buildTree() {
 
       const items = el('div', 'conn-items');
 
-      if (conn.type === 'mysql') {
+      if (isRemote(conn)) {
         const dbs = conn.databases || [];
-        const f = el('div', 'tree-folder');
-        const fh = el('div', 'tree-folder-head');
-        const fcaret = el('span', 'caret open', '▶');
-        fh.appendChild(fcaret);
-        fh.appendChild(el('span', null, '数据库'));
-        const fc = el('div', 'tree-folder-items');
-        dbs.forEach((db) => {
-          const item = makeTreeItem(conn, db);
-          if (db.name === conn.database) item.classList.add('active');
-          fc.appendChild(item);
-        });
-        if (!dbs.length) fc.appendChild(el('div', 'tree-empty', '（无数据库）'));
-        fh.addEventListener('click', () => {
-          const collapsed = fc.classList.toggle('collapsed');
-          fcaret.classList.toggle('open', !collapsed);
-        });
-        f.appendChild(fh);
-        f.appendChild(fc);
-        items.appendChild(f);
-
-        if (conn.database) {
-          const tables = (conn.tables || []).filter((t) => t.type !== 'view' && t.type !== 'database');
-          const views = (conn.tables || []).filter((t) => t.type === 'view');
-          if (tables.length) items.appendChild(makeFolder(conn, '表', tables));
-          if (views.length) items.appendChild(makeFolder(conn, '视图', views));
-          if (!tables.length && !views.length) items.appendChild(el('div', 'tree-empty', '（无表）'));
-        }
+        dbs.forEach((db) => items.appendChild(makeDatabaseNode(conn, db)));
+        if (!dbs.length) items.appendChild(el('div', 'tree-empty', '（无数据库）'));
       } else {
         const tables = (conn.tables || []).filter((t) => t.type !== 'view' && t.type !== 'database');
         const views = (conn.tables || []).filter((t) => t.type === 'view');
@@ -1370,6 +1379,7 @@ async function useDatabase(connId, database) {
   if (resp && resp.ok) {
     const c = connById(connId);
     if (c) {
+      c.name = resp.name;
       c.database = resp.database;
       c.tables = resp.tables;
       if (resp.databases) c.databases = resp.databases;
@@ -1394,7 +1404,7 @@ function showConnContextMenu(e, conn) {
     newDb.addEventListener('click', () => { closeContextMenu(); openCreateDatabase(conn); });
     menu.appendChild(newDb);
   }
-  if (!isRemote(conn) || conn.database) {
+  if (!isRemote(conn)) {
     const newTable = el('div', 'ctx-item', '新建表');
     newTable.addEventListener('click', () => { closeContextMenu(); openTableDesigner(conn); });
     menu.appendChild(newTable);
@@ -1424,7 +1434,7 @@ function showConnContextMenu(e, conn) {
   }
   let scheduler = null;
   let er = null;
-  if (!isRemote(conn) || conn.database) {
+  if (!isRemote(conn)) {
     scheduler = el('div', 'ctx-item', '计划任务');
     scheduler.addEventListener('click', () => { closeContextMenu(); openSchedulerTab(conn.id); });
     er = el('div', 'ctx-item', 'ER 图');
@@ -2082,13 +2092,30 @@ function restoreSql(conn) {
 function showDatabaseContextMenu(e, conn, t) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
+  const dbAct = (fn) => {
+    closeContextMenu();
+    if (conn.database === t.name) fn();
+    else useDatabase(conn.id, t.name).then(() => fn());
+  };
   const open = el('div', 'ctx-item', '打开数据库');
   open.addEventListener('click', () => { closeContextMenu(); useDatabase(conn.id, t.name); });
+  const newTable = el('div', 'ctx-item', '新建表');
+  newTable.addEventListener('click', () => dbAct(() => openTableDesigner(conn)));
+  const qb = el('div', 'ctx-item', '查询构建器');
+  qb.addEventListener('click', () => dbAct(() => openQueryBuilder(conn)));
+  const scheduler = el('div', 'ctx-item', '计划任务');
+  scheduler.addEventListener('click', () => dbAct(() => openSchedulerTab(conn.id)));
+  const er = el('div', 'ctx-item', 'ER 图');
+  er.addEventListener('click', () => dbAct(() => openErTab(conn.id)));
   const edit = el('div', 'ctx-item', '编辑数据库');
   edit.addEventListener('click', () => { closeContextMenu(); openEditDatabase(conn, t.name); });
   const drop = el('div', 'ctx-item danger', '删除数据库');
   drop.addEventListener('click', () => { closeContextMenu(); dropDatabase(conn, t.name); });
   menu.appendChild(open);
+  menu.appendChild(newTable);
+  menu.appendChild(qb);
+  menu.appendChild(scheduler);
+  menu.appendChild(er);
   menu.appendChild(edit);
   menu.appendChild(drop);
   menu.style.left = e.clientX + 'px';
