@@ -64,6 +64,15 @@ function remoteCfgKey(cfg) {
   const type = (cfg.type === 'mariadb' || cfg.type === 'mysql') ? 'mysql' : (cfg.type || '');
   return type + '|' + (cfg.host || '') + '|' + String(cfg.port || '') + '|' + (cfg.user || '');
 }
+function cleanSavedName(cfg) {
+  let n = (cfg.name || '').trim();
+  const at = n.indexOf('@');
+  if (at >= 0) {
+    const slash = n.indexOf('/', at);
+    if (slash > at) n = n.slice(0, slash);
+  }
+  return n || (cfg.user || 'root') + '@' + (cfg.host || '') + ':' + (cfg.port || '');
+}
 
 const GROUPS_KEY = 'connectionGroups';
 const GROUP_MAP_KEY = 'connectionGroupMap';
@@ -1157,7 +1166,7 @@ function renderSavedConnRow(cfg) {
   const key = remoteCfgKey(cfg);
   const row = el('div', 'tree-item closed');
   row.appendChild(el('span', 'ico', savedTypeIcon[cfg.type] || '🗄'));
-  row.appendChild(el('span', null, cfg.name || (cfg.user + '@' + cfg.host + ':' + cfg.port)));
+  row.appendChild(el('span', null, cleanSavedName(cfg)));
   row.title = '点击连接';
   row.addEventListener('click', () => reconnectRemote(cfg));
   row.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); showClosedConnContextMenu(e, key); });
@@ -1280,10 +1289,11 @@ function saveRemoteConnection(cfg) {
 const savedTypeIcon = { mysql: '🐬', mariadb: '🦭', postgres: '🐘', mssql: '🏢' };
 
 async function reconnectRemote(cfg) {
+  const cleanCfg = { ...cfg, name: cleanSavedName(cfg) };
   let conn;
-  if (cfg.type === 'postgres') conn = await window.api.pgConnect(cfg);
-  else if (cfg.type === 'mssql') conn = await window.api.mssqlConnect(cfg);
-  else conn = await window.api.mysqlConnect({ ...cfg, flavor: cfg.type === 'mariadb' ? 'mariadb' : 'mysql' });
+  if (cleanCfg.type === 'postgres') conn = await window.api.pgConnect(cleanCfg);
+  else if (cleanCfg.type === 'mssql') conn = await window.api.mssqlConnect(cleanCfg);
+  else conn = await window.api.mysqlConnect({ ...cleanCfg, flavor: cleanCfg.type === 'mariadb' ? 'mariadb' : 'mysql' });
   if (conn && conn.error) { setStatus('连接失败：' + conn.error, ''); return; }
   addConnection(conn);
 }
@@ -1497,6 +1507,9 @@ function newConnection() {
 function showConnContextMenu(e, conn) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
+  const newGroup = el('div', 'ctx-item', '新建分组');
+  newGroup.addEventListener('click', () => { closeContextMenu(); createGroup(); });
+  menu.appendChild(newGroup);
   if (isRemote(conn)) {
     const newDb = el('div', 'ctx-item', '新建数据库');
     newDb.addEventListener('click', () => { closeContextMenu(); openCreateDatabase(conn); });
@@ -1604,20 +1617,21 @@ function showGroupContextMenu(e, g) {
   document.addEventListener('contextmenu', closeContextMenu, { once: true });
 }
 
+async function createGroup() {
+  const name = await promptModal('分组名称：', '');
+  if (name && name.trim()) {
+    const list = loadGroups();
+    list.push({ id: 'g' + Date.now(), name: name.trim() });
+    saveGroups(list);
+    buildTree();
+  }
+}
+
 function showTreeContextMenu(e) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
   const newGroup = el('div', 'ctx-item', '新建分组');
-  newGroup.addEventListener('click', async () => {
-    closeContextMenu();
-    const name = await promptModal('分组名称：', '');
-    if (name && name.trim()) {
-      const list = loadGroups();
-      list.push({ id: 'g' + Date.now(), name: name.trim() });
-      saveGroups(list);
-      buildTree();
-    }
-  });
+  newGroup.addEventListener('click', () => { closeContextMenu(); createGroup(); });
   menu.appendChild(newGroup);
   menu.style.left = e.clientX + 'px';
   menu.style.top = e.clientY + 'px';
@@ -2672,6 +2686,7 @@ function init() {
   $('#tree').addEventListener('contextmenu', (e) => {
     if (e.target === $('#tree') || (e.target.classList && e.target.classList.contains('tree-empty'))) {
       e.preventDefault();
+      e.stopPropagation();
       showTreeContextMenu(e);
     }
   });
