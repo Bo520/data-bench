@@ -63,12 +63,6 @@ function init() {
     if (!state.activeId) { setStatus('请先打开一个数据库连接', ''); return; }
     openQueryTab(state.activeId);
   });
-  $('#conn-select').addEventListener('change', (e) => {
-    state.activeId = Number(e.target.value) || null;
-    refreshConnSelect();
-    const c = activeConn();
-    setStatus(c ? c.name : '', c ? connSubtitle(c) : '');
-  });
   $('#btn-help').addEventListener('click', (e) => { e.stopPropagation(); showHelpMenu(e.currentTarget); });
   $('#about-close').addEventListener('click', () => $('#about-modal').classList.add('hidden'));
   $('#update-close').addEventListener('click', () => $('#update-modal').classList.add('hidden'));

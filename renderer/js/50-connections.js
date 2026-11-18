@@ -150,7 +150,7 @@ async function useDatabase(connId, database) {
     }
     refreshConnSelect();
     buildTree();
-    setStatus(resp.name, '');
+    setStatus('已切换数据库', '');
     openDatabaseTab(connId, database);
   } else {
     setStatus('错误：' + (resp && resp.error ? resp.error : '切换失败'), '');
@@ -402,6 +402,16 @@ function closeContextMenu() {
 function showGroupContextMenu(e, g) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
+  const newConn = el('div', 'ctx-item', '新建连接');
+  newConn.addEventListener('click', () => { closeContextMenu(); newConnection(); });
+  const newGroup = el('div', 'ctx-item', '新建分组');
+  newGroup.addEventListener('click', () => { closeContextMenu(); createGroup(); });
+  const refresh = el('div', 'ctx-item', '刷新');
+  refresh.addEventListener('click', () => {
+    closeContextMenu();
+    const map = loadGroupMap();
+    state.connections.filter((c) => map[connServerKey(c)] === g.id).forEach((c) => refreshConn(c));
+  });
   const rename = el('div', 'ctx-item', '重命名分组');
   rename.addEventListener('click', async () => {
     closeContextMenu();
@@ -422,6 +432,9 @@ function showGroupContextMenu(e, g) {
     saveGroupMap(m);
     buildTree();
   });
+  menu.appendChild(newConn);
+  menu.appendChild(newGroup);
+  menu.appendChild(refresh);
   menu.appendChild(rename);
   menu.appendChild(del);
   menu.style.left = e.clientX + 'px';
@@ -478,7 +491,7 @@ async function refreshConn(conn) {
   }
   buildTree();
   loadTableCounts(conn);
-  setStatus('已刷新', connSubtitle(conn));
+  setStatus('已刷新', '');
 }
 
 function showTableContextMenu(e, conn, t) {

@@ -278,24 +278,9 @@ function addConnection(conn) {
   refreshConnSelect();
   buildTree();
   loadTableCounts(conn);
-  setStatus(conn.name, connSubtitle(conn));
+  setStatus('已连接', '');
 }
 
 function refreshConnSelect() {
-  const sel = $('#conn-select');
-  sel.innerHTML = '';
-  if (!state.connections.length) {
-    sel.appendChild(el('option', null, '（无连接）'));
-    $('#conn-info').textContent = '';
-    return;
-  }
-  state.connections.forEach((c) => {
-    const opt = el('option', null, c.name);
-    opt.value = String(c.id);
-    sel.appendChild(opt);
-  });
-  if (state.activeId != null) sel.value = String(state.activeId);
-  const info = $('#conn-info');
-  const c = activeConn();
-  info.textContent = c ? connSubtitle(c) : '';
+  // 连接选择框和当前连接信息已移除，保留空函数兼容调用
 }
