@@ -60,6 +60,10 @@ function connServerKey(conn) {
   if (conn.type === 'sqlite') return 'sqlite:' + (conn.path || '');
   return conn.type + '|' + (conn.host || '') + '|' + String(conn.port || '') + '|' + (conn.user || '');
 }
+function remoteCfgKey(cfg) {
+  const type = (cfg.type === 'mariadb' || cfg.type === 'mysql') ? 'mysql' : (cfg.type || '');
+  return type + '|' + (cfg.host || '') + '|' + String(cfg.port || '') + '|' + (cfg.user || '');
+}
 
 function promptModal(title, defaultVal) {
   return new Promise((resolve) => {
@@ -1089,85 +1093,97 @@ function makeDatabaseNode(conn, db) {
   return node;
 }
 
-function buildTree() {
-  const tree = $('#tree');
-  tree.innerHTML = '';
+function renderConnectionNode(conn) {
+  const group = el('div', 'conn-group');
+  const head = el('div', 'conn-head' + (conn.id === state.activeId ? ' active' : ''));
+  const caret = el('span', 'caret open', '▶');
+  const ico = el('span', 'conn-ico', connIcon(conn));
+  const title = el('div');
+  const nameSpan = el('span', 'conn-name', conn.name);
+  title.appendChild(nameSpan);
+  title.appendChild(el('span', 'path', connSubtitle(conn)));
+  head.appendChild(caret);
+  head.appendChild(ico);
+  head.appendChild(title);
+  conn._nameSpan = nameSpan;
+  nameSpan.addEventListener('dblclick', (e) => { e.stopPropagation(); renameConnectionInline(conn); });
 
-  if (state.connections.length) {
-    state.connections.forEach((conn) => {
-      const group = el('div', 'conn-group');
-      const head = el('div', 'conn-head' + (conn.id === state.activeId ? ' active' : ''));
-      const caret = el('span', 'caret open', '▶');
-      const ico = el('span', 'conn-ico', connIcon(conn));
-      const title = el('div');
-      const nameSpan = el('span', 'conn-name', conn.name);
-      title.appendChild(nameSpan);
-      title.appendChild(el('span', 'path', connSubtitle(conn)));
-      head.appendChild(caret);
-      head.appendChild(ico);
-      head.appendChild(title);
-      conn._nameSpan = nameSpan;
-      nameSpan.addEventListener('dblclick', (e) => { e.stopPropagation(); renameConnectionInline(conn); });
-
-      const items = el('div', 'conn-items');
-
-      if (isRemote(conn)) {
-        const dbs = conn.databases || [];
-        dbs.forEach((db) => items.appendChild(makeDatabaseNode(conn, db)));
-        if (!dbs.length) items.appendChild(el('div', 'tree-empty', '（无数据库）'));
-      } else {
-        const tables = (conn.tables || []).filter((t) => t.type !== 'view' && t.type !== 'database');
-        const views = (conn.tables || []).filter((t) => t.type === 'view');
-        if (tables.length) items.appendChild(makeFolder(conn, '表', tables));
-        if (views.length) items.appendChild(makeFolder(conn, '视图', views));
-        if (!tables.length && !views.length) items.appendChild(el('div', 'tree-empty', '（无表）'));
-      }
-
-      head.addEventListener('click', () => {
-        const collapsed = items.classList.toggle('collapsed');
-        caret.classList.toggle('open', !collapsed);
-      });
-      head.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        showConnContextMenu(e, conn);
-      });
-
-      group.appendChild(head);
-      group.appendChild(items);
-      tree.appendChild(group);
-    });
+  const items = el('div', 'conn-items');
+  if (isRemote(conn)) {
+    const dbs = conn.databases || [];
+    dbs.forEach((db) => items.appendChild(makeDatabaseNode(conn, db)));
+    if (!dbs.length) items.appendChild(el('div', 'tree-empty', '（无数据库）'));
+  } else {
+    const tables = (conn.tables || []).filter((t) => t.type !== 'view' && t.type !== 'database');
+    const views = (conn.tables || []).filter((t) => t.type === 'view');
+    if (tables.length) items.appendChild(makeFolder(conn, '表', tables));
+    if (views.length) items.appendChild(makeFolder(conn, '视图', views));
+    if (!tables.length && !views.length) items.appendChild(el('div', 'tree-empty', '（无表）'));
   }
 
-  // recent files
-  const recent = el('div', 'recent-group');
-  recent.appendChild(el('div', 'recent-title', '最近打开'));
-  const recentList = el('div');
-  loadRecentInto(recentList);
-  recent.appendChild(recentList);
-  tree.appendChild(recent);
+  head.addEventListener('click', () => {
+    const collapsed = items.classList.toggle('collapsed');
+    caret.classList.toggle('open', !collapsed);
+  });
+  head.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showConnContextMenu(e, conn);
+  });
 
-  // saved connections
-  const saved = el('div', 'recent-group');
-  saved.appendChild(el('div', 'recent-title', '已保存的连接'));
-  const savedList = el('div');
-  loadSavedConnections(savedList);
-  saved.appendChild(savedList);
-  tree.appendChild(saved);
+  group.appendChild(head);
+  group.appendChild(items);
+  return group;
 }
 
-async function loadRecentInto(container) {
-  const list = await window.api.recent();
-  if (!list || !list.length) {
-    container.appendChild(el('div', 'tree-empty', '（空）'));
-    return;
-  }
-  list.forEach((p) => {
-    const item = el('div', 'recent-item', p);
-    item.title = p;
-    item.addEventListener('click', () => openPath(p));
-    container.appendChild(item);
+function renderSavedConnRow(cfg) {
+  const row = el('div', 'tree-item closed');
+  row.appendChild(el('span', 'ico', savedTypeIcon[cfg.type] || '🗄'));
+  row.appendChild(el('span', null, cfg.name || (cfg.user + '@' + cfg.host + ':' + cfg.port)));
+  row.title = '点击连接';
+  row.addEventListener('click', () => reconnectRemote(cfg));
+  return row;
+}
+
+function renderRecentFileRow(path) {
+  const row = el('div', 'tree-item closed');
+  row.appendChild(el('span', 'ico', '🗄'));
+  row.appendChild(el('span', null, String(path).split(/[\\/]/).pop()));
+  row.title = path;
+  row.addEventListener('click', () => openPath(path));
+  return row;
+}
+
+async function buildTree() {
+  const tree = $('#tree');
+  tree.innerHTML = '';
+  const seen = new Set();
+
+  state.connections.forEach((conn) => {
+    seen.add(connServerKey(conn));
+    tree.appendChild(renderConnectionNode(conn));
   });
+
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem('savedConnections') || '[]'); } catch (e) { /* ignore */ }
+  saved.forEach((cfg) => {
+    const key = remoteCfgKey(cfg);
+    if (seen.has(key)) return;
+    seen.add(key);
+    tree.appendChild(renderSavedConnRow(cfg));
+  });
+
+  try {
+    const recent = await window.api.recent();
+    (recent || []).forEach((p) => {
+      const key = 'sqlite:' + p;
+      if (seen.has(key)) return;
+      seen.add(key);
+      tree.appendChild(renderRecentFileRow(p));
+    });
+  } catch (e) { /* ignore */ }
+
+  if (!tree.children.length) tree.appendChild(el('div', 'tree-empty', '（无连接）'));
 }
 
 function saveRemoteConnection(cfg) {
@@ -1181,19 +1197,6 @@ function saveRemoteConnection(cfg) {
 }
 
 const savedTypeIcon = { mysql: '🐬', mariadb: '🦭', postgres: '🐘', mssql: '🏢' };
-
-function loadSavedConnections(container) {
-  try {
-    const list = JSON.parse(localStorage.getItem('savedConnections') || '[]');
-    if (!list.length) { container.appendChild(el('div', 'tree-empty', '（空）')); return; }
-    list.forEach((c) => {
-      const item = el('div', 'recent-item', (savedTypeIcon[c.type] || '🗄') + ' ' + (c.name || (c.user + '@' + c.host + ':' + c.port + (c.database ? '/' + c.database : ''))));
-      item.title = '点击重新连接';
-      item.addEventListener('click', () => reconnectRemote(c));
-      container.appendChild(item);
-    });
-  } catch (e) { /* ignore */ }
-}
 
 async function reconnectRemote(cfg) {
   let conn;
