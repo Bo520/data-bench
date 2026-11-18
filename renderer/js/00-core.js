@@ -38,8 +38,7 @@ function formatValue(v) {
   return { text: String(v), cls: '' };
 }
 function setStatus(left, right) {
-  $('#status-left').textContent = left || '';
-  $('#status-right').textContent = right || '';
+  // 底部状态栏已移除，保留空函数兼容调用
 }
 function connSubtitle(conn) {
   if (!conn) return '';
