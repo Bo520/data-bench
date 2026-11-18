@@ -141,7 +141,7 @@ function quoteMssqlIdent(name) {
 }
 
 function remoteDisplayName(cfg) {
-  return (cfg.user || 'root') + '@' + (cfg.host || '127.0.0.1') + ':' + (cfg.port || '') + '/' + (cfg.database || '(未选库)');
+  return (cfg.user || 'root') + '@' + (cfg.host || '127.0.0.1') + ':' + (cfg.port || '');
 }
 
 function fmtUptime(sec) {
@@ -187,7 +187,7 @@ function mysqlToResultSetFromRows(rows) {
 }
 
 function mysqlDisplayName(cfg) {
-  return (cfg.user || 'root') + '@' + (cfg.host || '127.0.0.1') + ':' + (cfg.port || 3306) + '/' + (cfg.database || '(未选库)');
+  return (cfg.user || 'root') + '@' + (cfg.host || '127.0.0.1') + ':' + (cfg.port || 3306);
 }
 
 async function getMysqlDatabases(conn) {
@@ -614,7 +614,6 @@ function registerIpc() {
     const oldPool = conn.pool;
     conn.pool = newPool;
     conn.database = db;
-    conn.name = mysqlDisplayName(conn);
     try { await oldPool.end(); } catch (e) {}
     const tables = await getMysqlTables(conn);
     const databases = await getMysqlDatabases(conn);
@@ -660,7 +659,6 @@ function registerIpc() {
     const oldPool = conn.pool;
     conn.pool = newPool;
     conn.database = db;
-    conn.name = remoteDisplayName({ host: conn.host, port: conn.port, user: conn.user, database: db });
     try { await oldPool.end(); } catch (e) {}
     const tables = await getPgTables(conn);
     const databases = await getPgDatabases(conn);
@@ -724,7 +722,6 @@ function registerIpc() {
     const oldPool = conn.pool;
     conn.pool = newPool;
     conn.database = db;
-    conn.name = remoteDisplayName({ host: conn.host, port: conn.port, user: conn.user, database: db });
     try { await oldPool.close(); } catch (e) {}
     const tables = await getMssqlTables(conn);
     const databases = await getMssqlDatabases(conn);

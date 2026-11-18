@@ -42,7 +42,7 @@ function setStatus(left, right) {
 }
 function connSubtitle(conn) {
   if (!conn) return '';
-  if (conn.type === 'mysql' || conn.type === 'postgres' || conn.type === 'mssql') return conn.host + ':' + conn.port + (conn.database ? '/' + conn.database : '');
+  if (conn.type === 'mysql' || conn.type === 'postgres' || conn.type === 'mssql') return conn.host + ':' + conn.port;
   return conn.path || '';
 }
 function connIcon(conn) {
@@ -63,6 +63,22 @@ function connServerKey(conn) {
 function remoteCfgKey(cfg) {
   const type = (cfg.type === 'mariadb' || cfg.type === 'mysql') ? 'mysql' : (cfg.type || '');
   return type + '|' + (cfg.host || '') + '|' + String(cfg.port || '') + '|' + (cfg.user || '');
+}
+
+const GROUPS_KEY = 'connectionGroups';
+const GROUP_MAP_KEY = 'connectionGroupMap';
+function loadGroups() { try { return JSON.parse(localStorage.getItem(GROUPS_KEY) || '[]'); } catch (e) { return []; } }
+function saveGroups(list) { try { localStorage.setItem(GROUPS_KEY, JSON.stringify(list)); } catch (e) {} }
+function loadGroupMap() { try { return JSON.parse(localStorage.getItem(GROUP_MAP_KEY) || '{}'); } catch (e) { return {}; } }
+function saveGroupMap(map) { try { localStorage.setItem(GROUP_MAP_KEY, JSON.stringify(map)); } catch (e) {} }
+function groupOfKey(key) { return loadGroupMap()[key] || ''; }
+function setGroupOfKey(key, gid) { const m = loadGroupMap(); if (gid) m[key] = gid; else delete m[key]; saveGroupMap(m); }
+function makeDraggable(el, key) {
+  el.setAttribute('draggable', 'true');
+  el.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', key);
+    e.dataTransfer.effectAllowed = 'move';
+  });
 }
 
 function promptModal(title, defaultVal) {
@@ -1107,6 +1123,7 @@ function renderConnectionNode(conn) {
   head.appendChild(title);
   conn._nameSpan = nameSpan;
   nameSpan.addEventListener('dblclick', (e) => { e.stopPropagation(); renameConnectionInline(conn); });
+  makeDraggable(head, connServerKey(conn));
 
   const items = el('div', 'conn-items');
   if (isRemote(conn)) {
@@ -1137,31 +1154,78 @@ function renderConnectionNode(conn) {
 }
 
 function renderSavedConnRow(cfg) {
+  const key = remoteCfgKey(cfg);
   const row = el('div', 'tree-item closed');
   row.appendChild(el('span', 'ico', savedTypeIcon[cfg.type] || '🗄'));
   row.appendChild(el('span', null, cfg.name || (cfg.user + '@' + cfg.host + ':' + cfg.port)));
   row.title = '点击连接';
   row.addEventListener('click', () => reconnectRemote(cfg));
+  row.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); showClosedConnContextMenu(e, key); });
+  makeDraggable(row, key);
   return row;
 }
 
 function renderRecentFileRow(path) {
+  const key = 'sqlite:' + path;
   const row = el('div', 'tree-item closed');
   row.appendChild(el('span', 'ico', '🗄'));
   row.appendChild(el('span', null, String(path).split(/[\\/]/).pop()));
   row.title = path;
   row.addEventListener('click', () => openPath(path));
+  row.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); showClosedConnContextMenu(e, key); });
+  makeDraggable(row, key);
   return row;
+}
+
+function renderEntry(en) {
+  if (en.conn) return renderConnectionNode(en.conn);
+  if (en.cfg) return renderSavedConnRow(en.cfg);
+  return renderRecentFileRow(en.path);
+}
+
+function renderGroupFolder(g, members) {
+  const folder = el('div', 'tree-folder');
+  const head = el('div', 'tree-folder-head');
+  const caret = el('span', 'caret open', '▶');
+  head.appendChild(caret);
+  head.appendChild(el('span', 'ico', '📁'));
+  head.appendChild(el('span', null, g.name));
+  const fc = el('div', 'tree-folder-items');
+  members.forEach((en) => fc.appendChild(renderEntry(en)));
+  if (!members.length) fc.appendChild(el('div', 'tree-empty', '（空）'));
+  head.addEventListener('click', () => {
+    const collapsed = fc.classList.toggle('collapsed');
+    caret.classList.toggle('open', !collapsed);
+  });
+  head.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showGroupContextMenu(e, g);
+  });
+  head.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); head.classList.add('drop-hover'); });
+  head.addEventListener('dragleave', () => head.classList.remove('drop-hover'));
+  head.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    head.classList.remove('drop-hover');
+    const key = e.dataTransfer.getData('text/plain');
+    if (key) { setGroupOfKey(key, g.id); buildTree(); }
+  });
+  folder.appendChild(head);
+  folder.appendChild(fc);
+  return folder;
 }
 
 async function buildTree() {
   const tree = $('#tree');
   tree.innerHTML = '';
   const seen = new Set();
+  const entries = [];
 
   state.connections.forEach((conn) => {
-    seen.add(connServerKey(conn));
-    tree.appendChild(renderConnectionNode(conn));
+    const key = connServerKey(conn);
+    seen.add(key);
+    entries.push({ key, conn });
   });
 
   let saved = [];
@@ -1170,7 +1234,7 @@ async function buildTree() {
     const key = remoteCfgKey(cfg);
     if (seen.has(key)) return;
     seen.add(key);
-    tree.appendChild(renderSavedConnRow(cfg));
+    entries.push({ key, cfg });
   });
 
   try {
@@ -1179,9 +1243,26 @@ async function buildTree() {
       const key = 'sqlite:' + p;
       if (seen.has(key)) return;
       seen.add(key);
-      tree.appendChild(renderRecentFileRow(p));
+      entries.push({ key, path: p });
     });
   } catch (e) { /* ignore */ }
+
+  const groups = loadGroups();
+  const groupMap = loadGroupMap();
+  const byGroup = new Map();
+  const ungrouped = [];
+  entries.forEach((en) => {
+    const gid = groupMap[en.key] || '';
+    if (gid && groups.some((g) => g.id === gid)) {
+      if (!byGroup.has(gid)) byGroup.set(gid, []);
+      byGroup.get(gid).push(en);
+    } else {
+      ungrouped.push(en);
+    }
+  });
+
+  groups.forEach((g) => tree.appendChild(renderGroupFolder(g, byGroup.get(g.id) || [])));
+  ungrouped.forEach((en) => tree.appendChild(renderEntry(en)));
 
   if (!tree.children.length) tree.appendChild(el('div', 'tree-empty', '（无连接）'));
 }
@@ -1397,7 +1478,6 @@ async function useDatabase(connId, database) {
   if (resp && resp.ok) {
     const c = connById(connId);
     if (c) {
-      c.name = resp.name;
       c.database = resp.database;
       c.tables = resp.tables;
       if (resp.databases) c.databases = resp.databases;
@@ -1433,6 +1513,11 @@ function showConnContextMenu(e, conn) {
   const dup = el('div', 'ctx-item', '复制连接');
   dup.addEventListener('click', () => { closeContextMenu(); duplicateConnection(conn); });
   menu.appendChild(dup);
+  if (groupOfKey(connServerKey(conn))) {
+    const ungroup = el('div', 'ctx-item', '移出分组');
+    ungroup.addEventListener('click', () => { closeContextMenu(); setGroupOfKey(connServerKey(conn), ''); buildTree(); });
+    menu.appendChild(ungroup);
+  }
   if (isRemote(conn)) {
     const edit = el('div', 'ctx-item', '编辑连接');
     edit.addEventListener('click', () => { closeContextMenu(); editConnection(conn); });
@@ -1485,6 +1570,76 @@ function showConnContextMenu(e, conn) {
 function closeContextMenu() {
   const m = document.querySelector('.ctx-menu');
   if (m) m.remove();
+}
+
+function showGroupContextMenu(e, g) {
+  closeContextMenu();
+  const menu = el('div', 'ctx-menu');
+  const rename = el('div', 'ctx-item', '重命名分组');
+  rename.addEventListener('click', async () => {
+    closeContextMenu();
+    const name = await promptModal('分组名称：', g.name);
+    if (name && name.trim() && name.trim() !== g.name) {
+      const list = loadGroups().map((x) => (x.id === g.id ? { id: x.id, name: name.trim() } : x));
+      saveGroups(list);
+      buildTree();
+    }
+  });
+  const del = el('div', 'ctx-item danger', '删除分组');
+  del.addEventListener('click', async () => {
+    closeContextMenu();
+    if (!(await confirmModal('删除分组「' + g.name + '」？（连接不会被删除，会移到未分组）'))) return;
+    saveGroups(loadGroups().filter((x) => x.id !== g.id));
+    const m = loadGroupMap();
+    Object.keys(m).forEach((k) => { if (m[k] === g.id) delete m[k]; });
+    saveGroupMap(m);
+    buildTree();
+  });
+  menu.appendChild(rename);
+  menu.appendChild(del);
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  document.body.appendChild(menu);
+  document.addEventListener('click', closeContextMenu, { once: true });
+  document.addEventListener('contextmenu', closeContextMenu, { once: true });
+}
+
+function showTreeContextMenu(e) {
+  closeContextMenu();
+  const menu = el('div', 'ctx-menu');
+  const newGroup = el('div', 'ctx-item', '新建分组');
+  newGroup.addEventListener('click', async () => {
+    closeContextMenu();
+    const name = await promptModal('分组名称：', '');
+    if (name && name.trim()) {
+      const list = loadGroups();
+      list.push({ id: 'g' + Date.now(), name: name.trim() });
+      saveGroups(list);
+      buildTree();
+    }
+  });
+  menu.appendChild(newGroup);
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  document.body.appendChild(menu);
+  document.addEventListener('click', closeContextMenu, { once: true });
+  document.addEventListener('contextmenu', closeContextMenu, { once: true });
+}
+
+function showClosedConnContextMenu(e, key) {
+  closeContextMenu();
+  const menu = el('div', 'ctx-menu');
+  if (groupOfKey(key)) {
+    const ungroup = el('div', 'ctx-item', '移出分组');
+    ungroup.addEventListener('click', () => { closeContextMenu(); setGroupOfKey(key, ''); buildTree(); });
+    menu.appendChild(ungroup);
+  }
+  if (!menu.children.length) return;
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  document.body.appendChild(menu);
+  document.addEventListener('click', closeContextMenu, { once: true });
+  document.addEventListener('contextmenu', closeContextMenu, { once: true });
 }
 
 async function refreshConn(conn) {
@@ -2514,6 +2669,12 @@ function init() {
   refreshConnSelect();
   buildTree();
   initSidebarResizer();
+  $('#tree').addEventListener('contextmenu', (e) => {
+    if (e.target === $('#tree') || (e.target.classList && e.target.classList.contains('tree-empty'))) {
+      e.preventDefault();
+      showTreeContextMenu(e);
+    }
+  });
   document.addEventListener('mousedown', (e) => { if (acBox && !acBox.contains(e.target)) closeAutocomplete(); if (histBox && !histBox.contains(e.target)) closeQueryHistory(); if (snipBox && !snipBox.contains(e.target)) closeSnippets(); });
   document.addEventListener('keydown', (e) => {
     if (!(e.ctrlKey || e.metaKey)) return;
