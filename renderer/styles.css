@@ -355,7 +355,7 @@ table.grid td.blob { font-family: Consolas, monospace; font-size: 11px; color: v
 .row-del:hover { color: var(--err); }
 .struct-title { padding: 10px 12px 6px; font-weight: 600; color: var(--text); }
 
-/* ---------- navicat-like sidebar ---------- */
+/* ---------- sidebar ---------- */
 .sidebar-header { display: flex; align-items: center; justify-content: space-between; }
 .new-conn-btn { background: var(--accent); color: #fff; border: none; border-radius: 4px; width: 22px; height: 22px; line-height: 1; cursor: pointer; font-size: 15px; padding: 0; }
 .new-conn-btn:hover { background: var(--accent-2); }

@@ -1,11 +1,11 @@
 Unicode True
-!define APPNAME "NavicatLocal"
-!define APPEXE "NavicatLocal.exe"
-!define APPDIR "D:\NavicatLocal"
+!define APPNAME "DataBench"
+!define APPEXE "DataBench.exe"
+!define APPDIR "D:\DataBench"
 !define VERSION "1.0.0"
 
 Name "${APPNAME}"
-OutFile "D:\NavicatLocal-Setup.exe"
+OutFile "D:\DataBench-Setup.exe"
 InstallDir "$PROGRAMFILES64\${APPNAME}"
 RequestExecutionLevel admin
 SetCompressor /SOLID lzma

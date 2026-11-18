@@ -5,8 +5,7 @@ const fs = require('fs');
 const os = require('os');
 
 const LOG_FILES = [
-  'H:\\navicat_clone\\app-run.log',
-  path.join(os.homedir(), 'navicat-local.log'),
+  path.join(os.homedir(), 'data-bench.log'),
 ];
 function log(...a) {
   const line = new Date().toISOString() + ' ' + a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ') + '\n';
@@ -359,7 +358,7 @@ function createWindow() {
     height: 840,
     minWidth: 960,
     minHeight: 620,
-    title: 'NavicatLocal',
+    title: 'DataBench',
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     webPreferences: {

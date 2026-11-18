@@ -1,6 +1,6 @@
-# NavicatLocal
+# DataBench
 
-完全本地运行的数据库管理工具（Navicat 简化版），基于 Electron 开发。
+完全本地运行的数据库管理工具，基于 Electron 开发。
 
 ## 功能
 
@@ -13,7 +13,7 @@
 - **导入导出**：CSV 导入、CSV / JSON / SQL / Excel(.xlsx) 导出
 - **高级功能**：数据传输（跨库）、结构对比与同步、数据生成器、用户管理（MySQL）、查询构建器、计划任务、ER 图（外键连线）
 - **服务器监控**、备份为 SQL、恢复 SQL 文件
-- 浅色 Navicat 风格界面
+- 浅色界面
 
 ## 技术栈
 
@@ -42,7 +42,7 @@ npm run dist
 ## 目录结构
 
 ```
-navicat-local/
+data-bench/
 ├── main.js        # 主进程（IPC、数据库驱动）
 ├── preload.js     # 预加载脚本（contextBridge）
 ├── renderer/      # 渲染进程（界面）
@@ -59,6 +59,10 @@ navicat-local/
 - 计划任务仅在应用运行期间生效。
 - 表数据编辑依赖单一主键；无单一主键的表为只读。
 - `installer.nsi` 中的 `APPDIR` 与 `OutFile` 需改成你自己的目录。
+
+## 声明
+
+本项目与 Navicat / PremiumSoft CyberTech Ltd. 无任何关联，不包含其任何代码、图标或资源。
 
 ## License
 

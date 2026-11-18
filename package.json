@@ -1,14 +1,14 @@
 {
-  "name": "navicat-local",
-  "productName": "NavicatLocal",
+  "name": "data-bench",
+  "productName": "DataBench",
   "version": "1.0.0",
-  "description": "完全本地运行的数据库管理工具（Navicat 简化版），支持 SQLite / MySQL / MariaDB / PostgreSQL / SQL Server",
+  "description": "完全本地运行的数据库管理工具，支持 SQLite / MySQL / MariaDB / PostgreSQL / SQL Server",
   "main": "main.js",
   "author": "caibo",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-packager . NavicatLocal --platform=win32 --arch=x64 --out=dist --overwrite"
+    "dist": "electron-packager . DataBench --platform=win32 --arch=x64 --out=dist --overwrite"
   },
   "dependencies": {
     "mssql": "^12.7.14",
