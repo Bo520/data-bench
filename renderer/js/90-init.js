@@ -70,6 +70,7 @@ function init() {
     setStatus(c ? c.name : '', c ? connSubtitle(c) : '');
   });
   $('#btn-check-update').addEventListener('click', checkUpdate);
+  $('#btn-about').addEventListener('click', () => window.api.openExternal('https://github.com/Bo520/data-bench'));
   $('#update-close').addEventListener('click', () => $('#update-modal').classList.add('hidden'));
   $('#update-download').addEventListener('click', () => {
     const url = $('#update-download').dataset.url;
