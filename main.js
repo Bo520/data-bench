@@ -934,6 +934,16 @@ function registerIpc() {
     }
   });
 
+  ipcMain.handle('db:appInfo', () => ({
+    name: 'DataBench',
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    chrome: process.versions.chrome,
+    node: process.versions.node,
+    platform: process.platform,
+    arch: process.arch,
+  }));
+
   ipcMain.handle('db:openExternal', async (e, url) => {
     if (typeof url === 'string' && /^https?:\/\//i.test(url)) await shell.openExternal(url);
     return { ok: true };

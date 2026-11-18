@@ -36,5 +36,6 @@ contextBridge.exposeInMainWorld('api', {
   dropUser: (id, user, host) => ipcRenderer.invoke('db:dropUser', { id, user, host }),
   foreignKeys: (id) => ipcRenderer.invoke('db:foreignKeys', id),
   checkUpdate: () => ipcRenderer.invoke('db:checkUpdate'),
+  appInfo: () => ipcRenderer.invoke('db:appInfo'),
   openExternal: (url) => ipcRenderer.invoke('db:openExternal', url),
 });

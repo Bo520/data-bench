@@ -69,8 +69,8 @@ function init() {
     const c = activeConn();
     setStatus(c ? c.name : '', c ? connSubtitle(c) : '');
   });
-  $('#btn-check-update').addEventListener('click', checkUpdate);
-  $('#btn-about').addEventListener('click', () => window.api.openExternal('https://github.com/Bo520/data-bench'));
+  $('#btn-help').addEventListener('click', (e) => { e.stopPropagation(); showHelpMenu(e.currentTarget); });
+  $('#about-close').addEventListener('click', () => $('#about-modal').classList.add('hidden'));
   $('#update-close').addEventListener('click', () => $('#update-modal').classList.add('hidden'));
   $('#update-download').addEventListener('click', () => {
     const url = $('#update-download').dataset.url;

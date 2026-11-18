@@ -284,6 +284,40 @@ async function checkUpdate() {
   }
 }
 
+function showHelpMenu(btn) {
+  closeContextMenu();
+  const menu = el('div', 'ctx-menu');
+  const version = el('div', 'ctx-item', '版本信息');
+  version.addEventListener('click', () => { closeContextMenu(); showAppInfo(); });
+  const check = el('div', 'ctx-item', '检查更新');
+  check.addEventListener('click', () => { closeContextMenu(); checkUpdate(); });
+  const about = el('div', 'ctx-item', '关于 DataBench（GitHub）');
+  about.addEventListener('click', () => { closeContextMenu(); window.api.openExternal('https://github.com/Bo520/data-bench'); });
+  menu.appendChild(version);
+  menu.appendChild(check);
+  menu.appendChild(about);
+  const rect = btn.getBoundingClientRect();
+  menu.style.left = Math.max(0, rect.right - 200) + 'px';
+  menu.style.top = (rect.bottom + 4) + 'px';
+  document.body.appendChild(menu);
+  document.addEventListener('click', closeContextMenu, { once: true });
+}
+
+async function showAppInfo() {
+  const info = await window.api.appInfo();
+  $('#about-body').textContent = [
+    'DataBench v' + (info.version || ''),
+    '',
+    'Electron ' + (info.electron || ''),
+    'Chromium ' + (info.chrome || ''),
+    'Node.js ' + (info.node || ''),
+    '平台 ' + (info.platform || '') + ' ' + (info.arch || ''),
+    '',
+    '完全本地运行的数据库管理工具。',
+  ].join('\n');
+  $('#about-modal').classList.remove('hidden');
+}
+
 function showConnContextMenu(e, conn) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
