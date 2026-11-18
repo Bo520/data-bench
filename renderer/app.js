@@ -55,6 +55,11 @@ function connIcon(conn) {
 function isRemote(conn) {
   return !!conn && (conn.type === 'mysql' || conn.type === 'postgres' || conn.type === 'mssql');
 }
+function connServerKey(conn) {
+  if (!conn) return '';
+  if (conn.type === 'sqlite') return 'sqlite:' + (conn.path || '');
+  return conn.type + '|' + (conn.host || '') + '|' + String(conn.port || '') + '|' + (conn.user || '');
+}
 
 function promptModal(title, defaultVal) {
   return new Promise((resolve) => {
@@ -1204,6 +1209,16 @@ async function reconnectRemote(cfg) {
 function addConnection(conn) {
   if (!conn || conn.error) {
     if (conn && conn.error) setStatus('错误：' + conn.error, '');
+    return;
+  }
+  const key = connServerKey(conn);
+  const dup = state.connections.find((c) => c.id !== conn.id && connServerKey(c) === key);
+  if (dup) {
+    window.api.close(conn.id);
+    state.activeId = dup.id;
+    refreshConnSelect();
+    buildTree();
+    setStatus(dup.name + '（已连接，复用现有连接）', connSubtitle(dup));
     return;
   }
   const existing = state.connections.findIndex((c) => c.id === conn.id);
