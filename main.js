@@ -3,6 +3,7 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const https = require('https');
 
 const LOG_FILES = [
   path.join(os.homedir(), 'data-bench.log'),
@@ -15,7 +16,7 @@ function log(...a) {
 }
 log('[BOOT]', 'dir=', __dirname, 'execPath=', process.execPath, 'cwd=', process.cwd(), 'argv=', process.argv, 'type=', process.type, 'electron=', process.versions.electron);
 
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const initSqlJs = require('sql.js');
 let mysql = null;
 try {
@@ -45,6 +46,35 @@ log('[REQUIRES OK]');
 
 const { quoteIdent, quoteMysqlIdent, quoteMssqlIdent, remoteDisplayName, fmtUptime, parseCsv, mysqlToResultSet, mysqlToResultSetFromRows, mysqlDisplayName, pgToResultSet, mssqlToResultSet } = require('./lib/utils');
 const { getMysqlDatabases, getMysqlTables, getSqliteTableInfo, getMysqlTableInfo, getPgDatabases, getPgTables, getPgTableInfo, getMssqlDatabases, getMssqlTables, getMssqlTableInfo } = require('./lib/drivers');
+
+function compareVersions(a, b) {
+  const pa = String(a || '').replace(/^v/i, '').split(/[.\-+]/).map((n) => parseInt(n, 10) || 0);
+  const pb = String(b || '').replace(/^v/i, '').split(/[.\-+]/).map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] || 0, y = pb[i] || 0;
+    if (x !== y) return x - y;
+  }
+  return 0;
+}
+
+function fetchLatestRelease() {
+  return new Promise((resolve, reject) => {
+    const req = https.get({
+      hostname: 'api.github.com',
+      path: '/repos/Bo520/data-bench/releases/latest',
+      headers: { 'User-Agent': 'DataBench', 'Accept': 'application/vnd.github+json' },
+    }, (res) => {
+      if (res.statusCode !== 200) { res.resume(); reject(new Error('HTTP ' + res.statusCode)); return; }
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(10000, () => req.destroy(new Error('请求超时')));
+  });
+}
 
 // 兼容性处理：禁用硬件加速、禁用渲染器沙箱（解决低完整性目录下渲染进程 exitCode 18 启动失败）
 app.disableHardwareAcceleration();
@@ -881,6 +911,32 @@ function registerIpc() {
     } catch (err) {
       return { ok: false, error: err.message || String(err) };
     }
+  });
+
+  ipcMain.handle('db:checkUpdate', async () => {
+    const current = app.getVersion();
+    try {
+      const release = await fetchLatestRelease();
+      const latest = String(release.tag_name || '').replace(/^v/i, '');
+      const assets = (release.assets || []).map((a) => ({ name: a.name, url: a.browser_download_url }));
+      return {
+        ok: true,
+        current,
+        latest,
+        hasUpdate: compareVersions(latest, current) > 0,
+        name: release.name,
+        body: release.body,
+        html_url: release.html_url,
+        assets,
+      };
+    } catch (err) {
+      return { ok: false, current, error: err.message || String(err) };
+    }
+  });
+
+  ipcMain.handle('db:openExternal', async (e, url) => {
+    if (typeof url === 'string' && /^https?:\/\//i.test(url)) await shell.openExternal(url);
+    return { ok: true };
   });
 }
 

@@ -35,4 +35,6 @@ contextBridge.exposeInMainWorld('api', {
   createUser: (id, cfg) => ipcRenderer.invoke('db:createUser', { id, ...cfg }),
   dropUser: (id, user, host) => ipcRenderer.invoke('db:dropUser', { id, user, host }),
   foreignKeys: (id) => ipcRenderer.invoke('db:foreignKeys', id),
+  checkUpdate: () => ipcRenderer.invoke('db:checkUpdate'),
+  openExternal: (url) => ipcRenderer.invoke('db:openExternal', url),
 });

@@ -24,6 +24,9 @@
         <button id="btn-new-conn" class="new-conn-btn" title="新建连接">＋</button>
       </div>
       <div id="tree"></div>
+      <div class="sidebar-footer">
+        <button id="btn-check-update" class="check-update-btn" title="检查更新">检查更新</button>
+      </div>
     </aside>
     <div id="sidebar-resizer" title="拖动调整宽度"></div>
     <section id="content">
@@ -245,6 +248,17 @@
       <div class="modal-actions">
         <button id="confirm-ok" class="tb">确定</button>
         <button id="confirm-cancel" class="tb">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="update-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-title" id="update-title">检查更新</div>
+      <div class="update-body" id="update-body">正在检查更新…</div>
+      <div class="modal-actions">
+        <button id="update-download" class="tb hidden">去下载</button>
+        <button id="update-close" class="tb">关闭</button>
       </div>
     </div>
   </div>

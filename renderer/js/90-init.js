@@ -69,6 +69,13 @@ function init() {
     const c = activeConn();
     setStatus(c ? c.name : '', c ? connSubtitle(c) : '');
   });
+  $('#btn-check-update').addEventListener('click', checkUpdate);
+  $('#update-close').addEventListener('click', () => $('#update-modal').classList.add('hidden'));
+  $('#update-download').addEventListener('click', () => {
+    const url = $('#update-download').dataset.url;
+    if (url) window.api.openExternal(url);
+    $('#update-modal').classList.add('hidden');
+  });
 
   refreshConnSelect();
   buildTree();

@@ -262,6 +262,28 @@ function newConnection() {
   $('#conn-type-modal').classList.remove('hidden');
 }
 
+async function checkUpdate() {
+  $('#update-title').textContent = '检查更新';
+  $('#update-body').textContent = '正在检查更新…';
+  $('#update-download').classList.add('hidden');
+  $('#update-modal').classList.remove('hidden');
+  const resp = await window.api.checkUpdate();
+  if (!resp || resp.error) {
+    $('#update-title').textContent = '检查更新失败';
+    $('#update-body').textContent = (resp && resp.error) ? resp.error : '网络错误';
+    return;
+  }
+  if (resp.hasUpdate) {
+    $('#update-title').textContent = '发现新版本：' + (resp.name || ('v' + resp.latest));
+    $('#update-body').textContent = '当前版本 v' + resp.current + ' → 最新 v' + resp.latest + '\n\n' + (resp.body || '');
+    $('#update-download').classList.remove('hidden');
+    $('#update-download').dataset.url = resp.html_url || '';
+  } else {
+    $('#update-title').textContent = '已是最新版本';
+    $('#update-body').textContent = '当前版本 v' + resp.current + ' 已是最新。';
+  }
+}
+
 function showConnContextMenu(e, conn) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
