@@ -151,9 +151,111 @@ async function useDatabase(connId, database) {
     refreshConnSelect();
     buildTree();
     setStatus(resp.name, '');
+    openDatabaseTab(connId, database);
   } else {
     setStatus('错误：' + (resp && resp.error ? resp.error : '切换失败'), '');
   }
+}
+
+function openDatabaseTab(connId, dbName) {
+  const existing = state.tabs.find((t) => t.type === 'dbtables' && t.connId === connId && t.dbName === dbName);
+  if (existing) { activateTab(existing.id); if (existing.refreshData) existing.refreshData(); return existing; }
+
+  const conn = connById(connId);
+  const tab = makeTab('dbtables', '数据库 ' + dbName, connId, { dbName });
+
+  const bar = el('div', 'editor-toolbar');
+  const selInfo = el('span', 'hint', '');
+  const refreshBtn = el('button', 'tb', '刷新');
+  const dropBtn = el('button', 'tb', '删除选中表');
+  bar.appendChild(selInfo);
+  bar.appendChild(el('span', 'spacer'));
+  bar.appendChild(refreshBtn);
+  bar.appendChild(dropBtn);
+
+  const meta = el('div', 'results-meta', '');
+  const grid = el('div', 'results-grid');
+  tab.el.appendChild(bar);
+  tab.el.appendChild(meta);
+  tab.el.appendChild(grid);
+
+  let checks = [];
+
+  function updateSel() {
+    const n = checks.filter((c) => c.checked).length;
+    selInfo.textContent = n ? '已选 ' + n + ' 项' : '';
+  }
+
+  function render() {
+    const tables = (conn.tables || []).filter((t) => t.type !== 'database');
+    meta.className = 'results-meta ok';
+    meta.textContent = '共 ' + tables.length + ' 个对象（表/视图），双击打开';
+    grid.innerHTML = '';
+    const table = el('table', 'grid');
+    const thead = el('thead');
+    const hr = el('tr');
+    const thCb = el('th', null, '');
+    const allCb = el('input'); allCb.type = 'checkbox'; allCb.title = '全选/取消全选';
+    thCb.appendChild(allCb);
+    hr.appendChild(thCb);
+    ['名称', '类型', '行数'].forEach((h) => hr.appendChild(el('th', null, h)));
+    thead.appendChild(hr);
+    table.appendChild(thead);
+    const tbody = el('tbody');
+    checks = [];
+    tables.forEach((t) => {
+      const tr = el('tr');
+      const tdCb = el('td');
+      const cb = el('input'); cb.type = 'checkbox'; cb.value = t.name;
+      cb.addEventListener('change', updateSel);
+      checks.push(cb);
+      tdCb.appendChild(cb);
+      tr.appendChild(tdCb);
+      tr.appendChild(el('td', null, t.name));
+      tr.appendChild(el('td', null, t.type === 'view' ? '视图' : '表'));
+      const count = (conn.tableCounts && conn.tableCounts[t.name] !== undefined) ? String(conn.tableCounts[t.name]) : '';
+      tr.appendChild(el('td', null, count));
+      tr.addEventListener('dblclick', () => openTableTab(connId, t.name));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    grid.appendChild(table);
+    allCb.addEventListener('change', () => {
+      checks.forEach((c) => { c.checked = allCb.checked; });
+      updateSel();
+    });
+    updateSel();
+  }
+
+  async function refreshData() {
+    conn.tables = await window.api.tables(conn.id);
+    if (isRemote(conn)) conn.databases = await window.api.databases(conn.id);
+    conn.tableCounts = await window.api.tableCounts(conn.id);
+    buildTree();
+    render();
+  }
+
+  refreshBtn.addEventListener('click', refreshData);
+
+  dropBtn.addEventListener('click', async () => {
+    const names = checks.filter((c) => c.checked).map((c) => c.value);
+    if (!names.length) { setStatus('请先勾选要删除的表', ''); return; }
+    if (!(await confirmModal('确定删除 ' + names.length + ' 张表？此操作不可恢复！'))) return;
+    let done = 0, failed = 0;
+    for (const name of names) {
+      const item = (conn.tables || []).find((x) => x.name === name);
+      const sql = (item && item.type === 'view' ? 'DROP VIEW ' : 'DROP TABLE ') + qIdent(conn, name);
+      const r = await window.api.query(conn.id, sql);
+      if (r && r.error) failed++; else done++;
+    }
+    setStatus('已删除 ' + done + ' 张表' + (failed ? '，失败 ' + failed + ' 张' : ''), '');
+    await refreshData();
+  });
+
+  tab.refreshData = refreshData;
+  activateTab(tab.id);
+  refreshData();
+  return tab;
 }
 
 function newConnection() {
