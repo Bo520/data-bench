@@ -276,6 +276,7 @@ table.grid th.rownum, table.grid td.rownum {
 }
 table.grid thead th.rownum { z-index: 2; background: var(--bg-3); }
 table.grid tbody tr:nth-child(even) td { background: #fafbfc; }
+table.grid tbody tr.selected td { background: var(--sel); }
 table.grid td.null { color: var(--text-dim); font-style: italic; }
 table.grid td.blob { font-family: Consolas, monospace; font-size: 11px; color: var(--warn); }
 

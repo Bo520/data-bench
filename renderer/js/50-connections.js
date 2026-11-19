@@ -165,7 +165,7 @@ function openDatabaseTab(connId, dbName) {
   const tab = makeTab('dbtables', '数据库 ' + dbName, connId, { dbName });
 
   const bar = el('div', 'editor-toolbar');
-  const selInfo = el('span', 'hint', '');
+  const selInfo = el('span', 'hint', '单击选择，Ctrl 多选，Ctrl+Shift 范围选择');
   const refreshBtn = el('button', 'tb', '刷新');
   const dropBtn = el('button', 'tb', '删除选中表');
   bar.appendChild(selInfo);
@@ -179,52 +179,69 @@ function openDatabaseTab(connId, dbName) {
   tab.el.appendChild(meta);
   tab.el.appendChild(grid);
 
-  let checks = [];
+  let selectedNames = new Set();
+  let anchorIndex = -1;
+  let tableList = [];
 
-  function updateSel() {
-    const n = checks.filter((c) => c.checked).length;
-    selInfo.textContent = n ? '已选 ' + n + ' 项' : '';
+  function updateSelInfo() {
+    const n = selectedNames.size;
+    selInfo.textContent = n ? '已选 ' + n + ' 项' : '单击选择，Ctrl 多选，Ctrl+Shift 范围选择';
+  }
+
+  function applySelection() {
+    grid.querySelectorAll('tbody tr').forEach((tr, idx) => {
+      const name = tableList[idx] ? tableList[idx].name : '';
+      tr.classList.toggle('selected', selectedNames.has(name));
+    });
   }
 
   function render() {
-    const tables = (conn.tables || []).filter((t) => t.type !== 'database');
+    tableList = (conn.tables || []).filter((t) => t.type !== 'database');
+    selectedNames = new Set();
+    anchorIndex = -1;
     meta.className = 'results-meta ok';
-    meta.textContent = '共 ' + tables.length + ' 个对象（表/视图），双击打开';
+    meta.textContent = '共 ' + tableList.length + ' 个对象（表/视图），双击打开';
     grid.innerHTML = '';
     const table = el('table', 'grid');
     const thead = el('thead');
     const hr = el('tr');
-    const thCb = el('th', null, '');
-    const allCb = el('input'); allCb.type = 'checkbox'; allCb.title = '全选/取消全选';
-    thCb.appendChild(allCb);
-    hr.appendChild(thCb);
     ['名称', '类型', '行数'].forEach((h) => hr.appendChild(el('th', null, h)));
     thead.appendChild(hr);
     table.appendChild(thead);
     const tbody = el('tbody');
-    checks = [];
-    tables.forEach((t) => {
+    tableList.forEach((t, idx) => {
       const tr = el('tr');
-      const tdCb = el('td');
-      const cb = el('input'); cb.type = 'checkbox'; cb.value = t.name;
-      cb.addEventListener('change', updateSel);
-      checks.push(cb);
-      tdCb.appendChild(cb);
-      tr.appendChild(tdCb);
       tr.appendChild(el('td', null, t.name));
       tr.appendChild(el('td', null, t.type === 'view' ? '视图' : '表'));
       const count = (conn.tableCounts && conn.tableCounts[t.name] !== undefined) ? String(conn.tableCounts[t.name]) : '';
       tr.appendChild(el('td', null, count));
+      tr.addEventListener('click', (e) => {
+        if (e.ctrlKey && e.shiftKey) {
+          if (anchorIndex >= 0) {
+            const lo = Math.min(anchorIndex, idx), hi = Math.max(anchorIndex, idx);
+            selectedNames = new Set();
+            for (let i = lo; i <= hi; i++) selectedNames.add(tableList[i].name);
+          } else {
+            selectedNames = new Set([t.name]);
+          }
+          anchorIndex = idx;
+        } else if (e.ctrlKey) {
+          if (selectedNames.has(t.name)) selectedNames.delete(t.name);
+          else selectedNames.add(t.name);
+          anchorIndex = idx;
+        } else {
+          selectedNames = new Set([t.name]);
+          anchorIndex = idx;
+        }
+        applySelection();
+        updateSelInfo();
+      });
       tr.addEventListener('dblclick', () => openTableTab(connId, t.name));
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
     grid.appendChild(table);
-    allCb.addEventListener('change', () => {
-      checks.forEach((c) => { c.checked = allCb.checked; });
-      updateSel();
-    });
-    updateSel();
+    updateSelInfo();
   }
 
   async function refreshData() {
@@ -238,8 +255,8 @@ function openDatabaseTab(connId, dbName) {
   refreshBtn.addEventListener('click', refreshData);
 
   dropBtn.addEventListener('click', async () => {
-    const names = checks.filter((c) => c.checked).map((c) => c.value);
-    if (!names.length) { setStatus('请先勾选要删除的表', ''); return; }
+    const names = [...selectedNames];
+    if (!names.length) { selInfo.textContent = '请先选择要删除的表'; return; }
     if (!(await confirmModal('确定删除 ' + names.length + ' 张表？此操作不可恢复！'))) return;
     let done = 0, failed = 0;
     for (const name of names) {
@@ -248,7 +265,6 @@ function openDatabaseTab(connId, dbName) {
       const r = await window.api.query(conn.id, sql);
       if (r && r.error) failed++; else done++;
     }
-    setStatus('已删除 ' + done + ' 张表' + (failed ? '，失败 ' + failed + ' 张' : ''), '');
     await refreshData();
   });
 
