@@ -356,9 +356,9 @@ function copyText(text) {
 function showCellContextMenu(e, row, ci) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
-  const cell = el('div', 'ctx-item', t('menu.copyCell'));
+  const cell = el('div', 'ctx-item', '复制单元格值');
   cell.addEventListener('click', () => { closeContextMenu(); copyText(row.cur[ci] == null ? '' : String(row.cur[ci])); });
-  const rowItem = el('div', 'ctx-item', t('menu.copyRow'));
+  const rowItem = el('div', 'ctx-item', '复制整行（TSV）');
   rowItem.addEventListener('click', () => { closeContextMenu(); copyText(row.cur.map((v) => v == null ? '' : String(v)).join('\t')); });
   menu.appendChild(cell);
   menu.appendChild(rowItem);

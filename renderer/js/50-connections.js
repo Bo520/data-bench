@@ -303,35 +303,17 @@ async function checkUpdate() {
 function showHelpMenu(btn) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
-  const version = el('div', 'ctx-item', t('help.versionInfo'));
+  const version = el('div', 'ctx-item', '版本信息');
   version.addEventListener('click', () => { closeContextMenu(); showAppInfo(); });
-  const check = el('div', 'ctx-item', t('help.checkUpdate'));
+  const check = el('div', 'ctx-item', '检查更新');
   check.addEventListener('click', () => { closeContextMenu(); checkUpdate(); });
-  const about = el('div', 'ctx-item', t('help.about'));
+  const about = el('div', 'ctx-item', '关于 DataBench（GitHub）');
   about.addEventListener('click', () => { closeContextMenu(); window.api.openExternal('https://github.com/Bo520/data-bench'); });
   menu.appendChild(version);
   menu.appendChild(check);
   menu.appendChild(about);
   const rect = btn.getBoundingClientRect();
   menu.style.left = Math.max(0, rect.right - 200) + 'px';
-  menu.style.top = (rect.bottom + 4) + 'px';
-  document.body.appendChild(menu);
-  document.addEventListener('click', closeContextMenu, { once: true });
-}
-
-function showSettingsMenu(btn) {
-  closeContextMenu();
-  const menu = el('div', 'ctx-menu');
-  const header = el('div', 'ctx-item ctx-header', t('settings.language'));
-  menu.appendChild(header);
-  ['zh', 'en'].forEach((lang) => {
-    const label = lang === 'zh' ? t('settings.langZh') : t('settings.langEn');
-    const item = el('div', 'ctx-item', (currentLang === lang ? '✓ ' : '   ') + label);
-    item.addEventListener('click', () => { closeContextMenu(); setLanguage(lang); });
-    menu.appendChild(item);
-  });
-  const rect = btn.getBoundingClientRect();
-  menu.style.left = Math.max(0, rect.right - 160) + 'px';
   menu.style.top = (rect.bottom + 4) + 'px';
   document.body.appendChild(menu);
   document.addEventListener('click', closeContextMenu, { once: true });
@@ -355,62 +337,62 @@ async function showAppInfo() {
 function showConnContextMenu(e, conn) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
-  const newGroup = el('div', 'ctx-item', t('menu.newGroup'));
+  const newGroup = el('div', 'ctx-item', '新建分组');
   newGroup.addEventListener('click', () => { closeContextMenu(); createGroup(); });
   menu.appendChild(newGroup);
   if (isRemote(conn)) {
-    const newDb = el('div', 'ctx-item', t('menu.newDatabase'));
+    const newDb = el('div', 'ctx-item', '新建数据库');
     newDb.addEventListener('click', () => { closeContextMenu(); openCreateDatabase(conn); });
     menu.appendChild(newDb);
   }
   if (!isRemote(conn)) {
-    const newTable = el('div', 'ctx-item', t('menu.newTable'));
+    const newTable = el('div', 'ctx-item', '新建表');
     newTable.addEventListener('click', () => { closeContextMenu(); openTableDesigner(conn); });
     menu.appendChild(newTable);
-    const qb = el('div', 'ctx-item', t('menu.queryBuilder'));
+    const qb = el('div', 'ctx-item', '查询构建器');
     qb.addEventListener('click', () => { closeContextMenu(); openQueryBuilder(conn); });
     menu.appendChild(qb);
   }
-  const dup = el('div', 'ctx-item', t('menu.duplicate'));
+  const dup = el('div', 'ctx-item', '复制连接');
   dup.addEventListener('click', () => { closeContextMenu(); duplicateConnection(conn); });
   menu.appendChild(dup);
   if (groupOfKey(connServerKey(conn))) {
-    const ungroup = el('div', 'ctx-item', t('menu.removeFromGroup'));
+    const ungroup = el('div', 'ctx-item', '移出分组');
     ungroup.addEventListener('click', () => { closeContextMenu(); setGroupOfKey(connServerKey(conn), ''); buildTree(); });
     menu.appendChild(ungroup);
   }
   if (isRemote(conn)) {
-    const edit = el('div', 'ctx-item', t('menu.editConnection'));
+    const edit = el('div', 'ctx-item', '编辑连接');
     edit.addEventListener('click', () => { closeContextMenu(); editConnection(conn); });
     menu.appendChild(edit);
   }
-  const refresh = el('div', 'ctx-item', t('menu.refresh'));
+  const refresh = el('div', 'ctx-item', '刷新');
   refresh.addEventListener('click', () => { closeContextMenu(); refreshConn(conn); });
   let monitor = null;
   if (isRemote(conn)) {
-    monitor = el('div', 'ctx-item', t('menu.serverMonitor'));
+    monitor = el('div', 'ctx-item', '服务器监控');
     monitor.addEventListener('click', () => { closeContextMenu(); openServerInfoTab(conn.id); });
   }
   let userMgr = null;
   if (conn.type === 'mysql') {
-    userMgr = el('div', 'ctx-item', t('menu.userMgmt'));
+    userMgr = el('div', 'ctx-item', '用户管理');
     userMgr.addEventListener('click', () => { closeContextMenu(); openUserManagerTab(conn.id); });
   }
   let scheduler = null;
   let er = null;
   if (!isRemote(conn)) {
-    scheduler = el('div', 'ctx-item', t('menu.scheduler'));
+    scheduler = el('div', 'ctx-item', '计划任务');
     scheduler.addEventListener('click', () => { closeContextMenu(); openSchedulerTab(conn.id); });
-    er = el('div', 'ctx-item', t('menu.erDiagram'));
+    er = el('div', 'ctx-item', 'ER 图');
     er.addEventListener('click', () => { closeContextMenu(); openErTab(conn.id); });
   }
-  const backup = el('div', 'ctx-item', t('menu.backup'));
+  const backup = el('div', 'ctx-item', '备份为 SQL');
   backup.addEventListener('click', () => { closeContextMenu(); backupSql(conn); });
-  const restore = el('div', 'ctx-item', t('menu.restore'));
+  const restore = el('div', 'ctx-item', '恢复 SQL 文件');
   restore.addEventListener('click', () => { closeContextMenu(); restoreSql(conn); });
-  const rename = el('div', 'ctx-item', t('menu.rename'));
+  const rename = el('div', 'ctx-item', '重命名');
   rename.addEventListener('click', () => { closeContextMenu(); renameConnectionInline(conn); });
-  const close = el('div', 'ctx-item danger', t('menu.closeConnection'));
+  const close = el('div', 'ctx-item danger', '关闭连接');
   close.addEventListener('click', () => { closeContextMenu(); closeConnection(conn.id); });
   menu.appendChild(refresh);
   if (monitor) menu.appendChild(monitor);
@@ -436,17 +418,17 @@ function closeContextMenu() {
 function showGroupContextMenu(e, g) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
-  const newConn = el('div', 'ctx-item', t('menu.newConnection'));
+  const newConn = el('div', 'ctx-item', '新建连接');
   newConn.addEventListener('click', () => { closeContextMenu(); newConnection(); });
-  const newGroup = el('div', 'ctx-item', t('menu.newGroup'));
+  const newGroup = el('div', 'ctx-item', '新建分组');
   newGroup.addEventListener('click', () => { closeContextMenu(); createGroup(); });
-  const refresh = el('div', 'ctx-item', t('menu.refresh'));
+  const refresh = el('div', 'ctx-item', '刷新');
   refresh.addEventListener('click', () => {
     closeContextMenu();
     const map = loadGroupMap();
     state.connections.filter((c) => map[connServerKey(c)] === g.id).forEach((c) => refreshConn(c));
   });
-  const rename = el('div', 'ctx-item', t('menu.renameGroup'));
+  const rename = el('div', 'ctx-item', '重命名分组');
   rename.addEventListener('click', async () => {
     closeContextMenu();
     const name = await promptModal('分组名称：', g.name);
@@ -456,7 +438,7 @@ function showGroupContextMenu(e, g) {
       buildTree();
     }
   });
-  const del = el('div', 'ctx-item danger', t('menu.deleteGroup'));
+  const del = el('div', 'ctx-item danger', '删除分组');
   del.addEventListener('click', async () => {
     closeContextMenu();
     if (!(await confirmModal('删除分组「' + g.name + '」？（连接不会被删除，会移到未分组）'))) return;
@@ -491,7 +473,7 @@ async function createGroup() {
 function showTreeContextMenu(e) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
-  const newGroup = el('div', 'ctx-item', t('menu.newGroup'));
+  const newGroup = el('div', 'ctx-item', '新建分组');
   newGroup.addEventListener('click', () => { closeContextMenu(); createGroup(); });
   menu.appendChild(newGroup);
   menu.style.left = e.clientX + 'px';
@@ -505,7 +487,7 @@ function showClosedConnContextMenu(e, key) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
   if (groupOfKey(key)) {
-    const ungroup = el('div', 'ctx-item', t('menu.removeFromGroup'));
+    const ungroup = el('div', 'ctx-item', '移出分组');
     ungroup.addEventListener('click', () => { closeContextMenu(); setGroupOfKey(key, ''); buildTree(); });
     menu.appendChild(ungroup);
   }
@@ -532,29 +514,29 @@ function showTableContextMenu(e, conn, t) {
   if (t.type === 'database') return;
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
-  const open = el('div', 'ctx-item', t('menu.openTable'));
+  const open = el('div', 'ctx-item', '打开表');
   open.addEventListener('click', () => { closeContextMenu(); state.activeId = conn.id; refreshConnSelect(); openTableTab(conn.id, t.name); });
-  const rename = el('div', 'ctx-item', t('menu.rename'));
+  const rename = el('div', 'ctx-item', '重命名');
   rename.addEventListener('click', () => { closeContextMenu(); renameTable(conn, t); });
-  const truncate = el('div', 'ctx-item danger', t('menu.truncate'));
+  const truncate = el('div', 'ctx-item danger', '清空表');
   truncate.addEventListener('click', () => { closeContextMenu(); truncateTable(conn, t); });
-  const drop = el('div', 'ctx-item danger', t('menu.deleteTable'));
+  const drop = el('div', 'ctx-item danger', '删除表');
   drop.addEventListener('click', () => { closeContextMenu(); dropTable(conn, t); });
-  const dup = el('div', 'ctx-item', t('menu.copyTable'));
+  const dup = el('div', 'ctx-item', '复制表');
   dup.addEventListener('click', () => { closeContextMenu(); duplicateTable(conn, t); });
-  const transfer = el('div', 'ctx-item', t('menu.dataTransfer'));
+  const transfer = el('div', 'ctx-item', '数据传输');
   transfer.addEventListener('click', () => { closeContextMenu(); openDataTransfer(conn, t); });
-  const compare = el('div', 'ctx-item', t('menu.structureCompare'));
+  const compare = el('div', 'ctx-item', '结构对比');
   compare.addEventListener('click', () => { closeContextMenu(); openStructureCompare(conn, t); });
-  const gen = el('div', 'ctx-item', t('menu.dataGenerator'));
+  const gen = el('div', 'ctx-item', '数据生成器');
   gen.addEventListener('click', () => { closeContextMenu(); openDataGenerator(conn, t); });
-  const imp = el('div', 'ctx-item', t('menu.importCsv'));
+  const imp = el('div', 'ctx-item', '导入 CSV');
   imp.addEventListener('click', () => { closeContextMenu(); importCsv(conn, t); });
-  const expJson = el('div', 'ctx-item', t('menu.exportJson'));
+  const expJson = el('div', 'ctx-item', '导出 JSON');
   expJson.addEventListener('click', () => { closeContextMenu(); exportJson(conn, t); });
-  const expSql = el('div', 'ctx-item', t('menu.exportSql'));
+  const expSql = el('div', 'ctx-item', '导出 SQL');
   expSql.addEventListener('click', () => { closeContextMenu(); exportSql(conn, t); });
-  const expExcel = el('div', 'ctx-item', t('menu.exportExcel'));
+  const expExcel = el('div', 'ctx-item', '导出 Excel');
   expExcel.addEventListener('click', () => { closeContextMenu(); exportExcel(conn, t); });
   menu.appendChild(open);
   menu.appendChild(rename);

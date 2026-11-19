@@ -52,9 +52,9 @@ function makeDatabaseNode(conn, db) {
   if (isActive) {
     const tables = (conn.tables || []).filter((t) => t.type !== 'view' && t.type !== 'database');
     const views = (conn.tables || []).filter((t) => t.type === 'view');
-    if (tables.length) fc.appendChild(makeFolder(conn, t('tree.tables'), tables));
-    if (views.length) fc.appendChild(makeFolder(conn, t('tree.views'), views));
-    if (!tables.length && !views.length) fc.appendChild(el('div', 'tree-empty', t('tree.noTables')));
+    if (tables.length) fc.appendChild(makeFolder(conn, '表', tables));
+    if (views.length) fc.appendChild(makeFolder(conn, '视图', views));
+    if (!tables.length && !views.length) fc.appendChild(el('div', 'tree-empty', '（无表）'));
   }
   head.addEventListener('click', () => {
     if (isActive) {
@@ -94,13 +94,13 @@ function renderConnectionNode(conn) {
   if (isRemote(conn)) {
     const dbs = conn.databases || [];
     dbs.forEach((db) => items.appendChild(makeDatabaseNode(conn, db)));
-    if (!dbs.length) items.appendChild(el('div', 'tree-empty', t('tree.noDatabase')));
+    if (!dbs.length) items.appendChild(el('div', 'tree-empty', '（无数据库）'));
   } else {
     const tables = (conn.tables || []).filter((t) => t.type !== 'view' && t.type !== 'database');
     const views = (conn.tables || []).filter((t) => t.type === 'view');
-    if (tables.length) items.appendChild(makeFolder(conn, t('tree.tables'), tables));
-    if (views.length) items.appendChild(makeFolder(conn, t('tree.views'), views));
-    if (!tables.length && !views.length) items.appendChild(el('div', 'tree-empty', t('tree.noTables')));
+    if (tables.length) items.appendChild(makeFolder(conn, '表', tables));
+    if (views.length) items.appendChild(makeFolder(conn, '视图', views));
+    if (!tables.length && !views.length) items.appendChild(el('div', 'tree-empty', '（无表）'));
   }
 
   head.addEventListener('click', () => {
@@ -157,7 +157,7 @@ function renderGroupFolder(g, members) {
   head.appendChild(el('span', null, g.name));
   const fc = el('div', 'tree-folder-items');
   members.forEach((en) => fc.appendChild(renderEntry(en)));
-  if (!members.length) fc.appendChild(el('div', 'tree-empty', t('tree.empty')));
+  if (!members.length) fc.appendChild(el('div', 'tree-empty', '（空）'));
   head.addEventListener('click', () => {
     const collapsed = fc.classList.toggle('collapsed');
     caret.classList.toggle('open', !collapsed);
@@ -229,7 +229,7 @@ async function buildTree() {
   groups.forEach((g) => tree.appendChild(renderGroupFolder(g, byGroup.get(g.id) || [])));
   ungrouped.forEach((en) => tree.appendChild(renderEntry(en)));
 
-  if (!tree.children.length) tree.appendChild(el('div', 'tree-empty', t('tree.noConnection')));
+  if (!tree.children.length) tree.appendChild(el('div', 'tree-empty', '（无连接）'));
 }
 
 function saveRemoteConnection(cfg) {
