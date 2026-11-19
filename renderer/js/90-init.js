@@ -63,6 +63,7 @@ function init() {
     if (!state.activeId) { setStatus('请先打开一个数据库连接', ''); return; }
     openQueryTab(state.activeId);
   });
+  $('#btn-settings').addEventListener('click', (e) => { e.stopPropagation(); showSettingsMenu(e.currentTarget); });
   $('#btn-help').addEventListener('click', (e) => { e.stopPropagation(); showHelpMenu(e.currentTarget); });
   $('#about-close').addEventListener('click', () => $('#about-modal').classList.add('hidden'));
   $('#update-close').addEventListener('click', () => $('#update-modal').classList.add('hidden'));
@@ -74,6 +75,7 @@ function init() {
 
   refreshConnSelect();
   buildTree();
+  applyStaticI18n();
   initSidebarResizer();
   $('#tree').addEventListener('contextmenu', (e) => {
     if (e.target === $('#tree') || (e.target.classList && e.target.classList.contains('tree-empty'))) {

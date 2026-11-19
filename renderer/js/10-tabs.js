@@ -70,11 +70,11 @@ function closeAllTabs() {
 function showTabContextMenu(e, tabId) {
   closeContextMenu();
   const menu = el('div', 'ctx-menu');
-  const close = el('div', 'ctx-item', '关闭');
+  const close = el('div', 'ctx-item', t('menu.close'));
   close.addEventListener('click', () => { closeContextMenu(); closeTab(tabId); });
-  const closeOthers = el('div', 'ctx-item', '关闭其他');
+  const closeOthers = el('div', 'ctx-item', t('menu.closeOthers'));
   closeOthers.addEventListener('click', () => { closeContextMenu(); closeOtherTabs(tabId); });
-  const closeAll = el('div', 'ctx-item', '全部关闭');
+  const closeAll = el('div', 'ctx-item', t('menu.closeAll'));
   closeAll.addEventListener('click', () => { closeContextMenu(); closeAllTabs(); });
   menu.appendChild(close);
   menu.appendChild(closeOthers);
